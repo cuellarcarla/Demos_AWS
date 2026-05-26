@@ -1,0 +1,36 @@
+name: Deploy WordPress ECS
+
+on:
+  push:
+    branches: [main]
+    paths: ['project/3-wp-ecs/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - run: terraform init
+        working-directory: ./project/3-wp-ecs/terraform
+
+      - run: terraform apply -auto-approve
+        working-directory: ./project/3-wp-ecs/terraform
+
+      - name: URL final
+        run: |
+          cd ./project/3-wp-ecs/terraform
+          echo "✅ WordPress ECS: $(terraform output -raw wordpress_url)"
+          echo "⏳ Espera ~5 min fins que Fargate arrenqui"
