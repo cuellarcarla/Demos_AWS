@@ -3,7 +3,7 @@ terraform {
     aws = { source = "hashicorp/aws", version = "~> 5.0" }
   }
   backend "s3" {
-    bucket = "tfstate-cv-challenge"
+    bucket = "tfstate-lab-demo"
     key    = "wp-ec2/terraform.tfstate"
     region = "us-east-1"
   }
@@ -13,7 +13,7 @@ provider "aws" {
   region = var.aws_region
 }
 
-# --- VPC default (Learner Lab ja la té) ---
+# Usem la VPC i subnets per defecte que ja existeixen al Learner Lab
 data "aws_vpc" "default" { default = true }
 
 data "aws_subnets" "default" {
@@ -23,21 +23,15 @@ data "aws_subnets" "default" {
   }
 }
 
-# --- Security Group ---
-resource "aws_security_group" "wp_ec2" {
-  name        = "${var.project_name}-wp-ec2-sg"
+# Security Group: només ports 80 obert al món
+resource "aws_security_group" "wp" {
+  name        = "wp-ec2-sg"
   description = "WordPress EC2"
   vpc_id      = data.aws_vpc.default.id
 
   ingress {
     from_port   = 80
     to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 22
-    to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -49,33 +43,39 @@ resource "aws_security_group" "wp_ec2" {
   }
 }
 
-# --- AMI Ubuntu 22.04 ---
-data "aws_ami" "ubuntu" {
+# AMI Amazon Linux 2023 (més lleugera i disponible al Learner Lab)
+data "aws_ami" "al2023" {
   most_recent = true
-  owners      = ["099720109477"] # Canonical
+  owners      = ["amazon"]
   filter {
     name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+    values = ["al2023-ami-*-x86_64"]
   }
 }
 
-# --- EC2 Instance ---
 resource "aws_instance" "wordpress" {
-  ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t3.micro"
-  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
-  vpc_security_group_ids = [aws_security_group.wp_ec2.id]
+  ami                         = data.aws_ami.al2023.id
+  instance_type               = "t3.micro"
+  subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
+  vpc_security_group_ids      = [aws_security_group.wp.id]
   associate_public_ip_address = true
 
+  # user_data: instal·la Docker i arrenca WordPress + MySQL
   user_data = <<-EOF
     #!/bin/bash
-    apt-get update -y
-    apt-get install -y docker.io docker-compose-plugin
+    yum update -y
+    yum install -y docker
     systemctl start docker
     systemctl enable docker
 
-    mkdir -p /opt/wordpress
-    cat > /opt/wordpress/docker-compose.yml << 'COMPOSE'
+    # Docker Compose v2 (plugin)
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+      -o /usr/local/lib/docker/cli-plugins/docker-compose
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+    mkdir -p /opt/wp
+    cat > /opt/wp/docker-compose.yml << 'COMPOSE'
 version: '3.8'
 services:
   db:
@@ -88,7 +88,6 @@ services:
       MYSQL_PASSWORD: wppass
     volumes:
       - db_data:/var/lib/mysql
-
   wordpress:
     image: wordpress:latest
     restart: always
@@ -99,19 +98,19 @@ services:
       WORDPRESS_DB_USER: wpuser
       WORDPRESS_DB_PASSWORD: wppass
       WORDPRESS_DB_NAME: wordpress
+    depends_on:
+      - db
     volumes:
       - wp_data:/var/www/html
-
 volumes:
   db_data:
   wp_data:
 COMPOSE
 
-    cd /opt/wordpress && docker compose up -d
+    cd /opt/wp && docker compose up -d
   EOF
 
   tags = {
-    Name        = "${var.project_name}-wordpress-ec2"
-    Environment = var.environment
+    Name = "wordpress-ec2-demo"
   }
 }

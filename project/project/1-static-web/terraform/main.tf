@@ -1,13 +1,9 @@
 terraform {
   required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
+    aws = { source = "hashicorp/aws", version = "~> 5.0" }
   }
-  # Estat en S3 (crea el bucket manualment abans: aws s3 mb s3://tfstate-cv-challenge)
   backend "s3" {
-    bucket = "tfstate-cv-challenge"
+    bucket = "tfstate-lab-demo"
     key    = "static-web/terraform.tfstate"
     region = "us-east-1"
   }
@@ -17,9 +13,9 @@ provider "aws" {
   region = var.aws_region
 }
 
-# --- S3 bucket per la web ---
 resource "aws_s3_bucket" "web" {
-  bucket = "${var.project_name}-web-${var.environment}"
+  bucket = "cv-challenge-web-demo"
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_public_access_block" "web" {
@@ -37,7 +33,7 @@ resource "aws_s3_bucket_website_configuration" "web" {
 }
 
 resource "aws_s3_bucket_policy" "web" {
-  bucket = aws_s3_bucket.web.id
+  bucket     = aws_s3_bucket.web.id
   depends_on = [aws_s3_bucket_public_access_block.web]
   policy = jsonencode({
     Version = "2012-10-17"

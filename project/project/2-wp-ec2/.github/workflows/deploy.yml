@@ -1,0 +1,36 @@
+name: Deploy WordPress EC2
+
+on:
+  push:
+    branches: [main]
+    paths: ['2-wp-ec2/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - run: terraform init
+        working-directory: ./2-wp-ec2/terraform
+
+      - run: terraform apply -auto-approve
+        working-directory: ./2-wp-ec2/terraform
+
+      - name: URL final
+        run: |
+          cd ./2-wp-ec2/terraform
+          echo "✅ WordPress: $(terraform output -raw wordpress_url)"
+          echo "⏳ Espera ~2 min fins que Docker arrenqui WordPress"
