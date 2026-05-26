@@ -3,7 +3,7 @@ terraform {
     aws = { source = "hashicorp/aws", version = "~> 5.0" }
   }
   backend "s3" {
-    bucket = "tfstate-lab-demo"
+    bucket = "tfstate-carla-demos-2026"
     key    = "static-web/terraform.tfstate"
     region = "us-east-1"
   }
