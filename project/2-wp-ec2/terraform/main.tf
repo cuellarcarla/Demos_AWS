@@ -59,21 +59,19 @@ resource "aws_instance" "wordpress" {
   subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
   vpc_security_group_ids      = [aws_security_group.wp.id]
   associate_public_ip_address = true
+  user_data_replace_on_change = true
 
-  # user_data: instal·la Docker i arrenca WordPress + MySQL
-user_data = <<-EOF
+  user_data = <<-EOF
     #!/bin/bash
     set -e
     yum update -y
     yum install -y docker
     systemctl start docker
     systemctl enable docker
-
     mkdir -p /usr/local/lib/docker/cli-plugins
     curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
       -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-
     mkdir -p /opt/wp
     cat > /opt/wp/docker-compose.yml << 'ENDOFCOMPOSE'
 version: '3.8'
@@ -106,7 +104,6 @@ volumes:
   db_data:
   wp_data:
 ENDOFCOMPOSE
-
     cd /opt/wp && docker compose up -d
   EOF
 
