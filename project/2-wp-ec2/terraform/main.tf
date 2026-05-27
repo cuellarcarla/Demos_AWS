@@ -13,13 +13,18 @@ provider "aws" {
   region = var.aws_region
 }
 
-# Usem la VPC i subnets per defecte que ja existeixen al Learner Lab
+# Usem la VPC per defecte del Learner Lab
 data "aws_vpc" "default" { default = true }
 
-data "aws_subnets" "default" {
+# SOLUCIÓ DE XARXA: Busquem només les subnets que tinguin IP pública real
+data "aws_subnets" "public" {
   filter {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
+  }
+  filter {
+    name   = "map-public-ip-on-launch"
+    values = ["true"]
   }
 }
 
@@ -64,11 +69,15 @@ data "aws_ami" "al2023" {
 resource "aws_instance" "wordpress" {
   ami                         = data.aws_ami.al2023.id
   instance_type               = "t3.micro"
-  subnet_id                   = tolist(data.aws_subnets.default.ids)[0]
+  
+  # Forcem l'ús de la subnet pública trobada pel filtre
+  subnet_id                   = tolist(data.aws_subnets.public.ids)[0]
+  
   vpc_security_group_ids      = [aws_security_group.wp.id]
   associate_public_ip_address = true
   user_data_replace_on_change = true
 
+  key_name                    = "vockey"
   iam_instance_profile        = "LabInstanceProfile"
 
   user_data = <<EOF
