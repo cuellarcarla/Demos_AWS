@@ -61,17 +61,19 @@ resource "aws_instance" "wordpress" {
   associate_public_ip_address = true
   user_data_replace_on_change = true
 
-  user_data = <<-EOF
+user_data = <<-EOF
     #!/bin/bash
-    set -e
+    exec > /var/log/user-data.log 2>&1
+    echo "START $(date)"
+
     yum update -y
     yum install -y docker
     systemctl start docker
     systemctl enable docker
-    mkdir -p /usr/local/lib/docker/cli-plugins
-    curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
-      -o /usr/local/lib/docker/cli-plugins/docker-compose
-    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+    yum install -y python3-pip
+    pip3 install docker-compose
+
     mkdir -p /opt/wp
     cat > /opt/wp/docker-compose.yml << 'ENDOFCOMPOSE'
 version: '3.8'
@@ -104,7 +106,10 @@ volumes:
   db_data:
   wp_data:
 ENDOFCOMPOSE
-    cd /opt/wp && docker compose up -d
+
+    cd /opt/wp
+    docker-compose up -d
+    echo "END $(date)"
   EOF
 
   tags = {
