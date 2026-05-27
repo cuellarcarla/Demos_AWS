@@ -61,21 +61,22 @@ resource "aws_instance" "wordpress" {
   associate_public_ip_address = true
   user_data_replace_on_change = true
 
-  user_data = <<-EOF
-    #!/bin/bash
-    exec > /var/log/user-data.log 2>&1
-    echo "START $(date)"
+  # S'han eliminat completament els espais inicials de cada línia de l'script
+  user_data = <<EOF
+#!/bin/bash
+exec > /var/log/user-data.log 2>&1
+echo "START \$(date)"
 
-    # Actualitzar i instal·lar Docker + el connector Compose oficial d'Amazon
-    yum update -y
-    yum install -y docker docker-compose-plugin
-    
-    systemctl start docker
-    systemctl enable docker
+# Actualitzar i instal·lar Docker + el connector Compose oficial d'Amazon
+yum update -y
+yum install -y docker docker-compose-plugin
 
-    # Crear directori del projecte
-    mkdir -p /opt/wp
-    cat > /opt/wp/docker-compose.yml << 'ENDOFCOMPOSE'
+systemctl start docker
+systemctl enable docker
+
+# Crear directori del projecte
+mkdir -p /opt/wp
+cat << 'ENDOFCOMPOSE' > /opt/wp/docker-compose.yml
 version: '3.8'
 services:
   db:
@@ -107,11 +108,10 @@ volumes:
   wp_data:
 ENDOFCOMPOSE
 
-    cd /opt/wp
-    # Nota el canvi: ara és 'docker compose' espai, no guionet
-    docker compose up -d
-    echo "END $(date)"
-  EOF
+cd /opt/wp
+docker compose up -d
+echo "END \$(date)"
+EOF
 
   tags = {
     Name = "wordpress-ec2-demo"
