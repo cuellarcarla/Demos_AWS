@@ -22,7 +22,6 @@ data "aws_subnets" "default" {
   }
 }
 
-# Obtenim el compte AWS per construir l'ARN del LabRole
 data "aws_caller_identity" "current" {}
 
 locals {
