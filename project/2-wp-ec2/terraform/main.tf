@@ -82,22 +82,22 @@ resource "aws_instance" "wordpress" {
 
   user_data = <<EOF
 #!/bin/bash
-exec > /var/log/user-data.log 2>&1
-echo "START \$(date)"
+# Evitar bloquejos interns de sortida a Internet
+echo "START" > /var/log/user-data.log
 
-# Actualitzar i instal·lar Docker + el connector Compose oficial d'Amazon
-yum update -y
-yum install -y docker docker-compose-plugin
+# Anem directes a instal·lar DOCKER sense fer el 'yum update' sencer per no congelar la màquina
+yum install -y docker &>> /var/log/user-data.log
 
-# Engegar servei
-systemctl daemon-reload
-systemctl enable docker
-systemctl start docker
+# Descarreguem manualment el Docker Compose per si el paquet d'Amazon falla
+mkdir -p /usr/local/lib/docker/cli-plugins/
+curl -SL https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-# Pausa de seguretat perquè Docker aixeque la seva xarxa interna interna
-sleep 15
+# Engeguem el servei
+systemctl start docker &>> /var/log/user-data.log
+systemctl enable docker &>> /var/log/user-data.log
 
-# Crear directori del projecte
+# Crear directori i el fitxer
 mkdir -p /opt/wp
 cat << 'ENDOFCOMPOSE' > /opt/wp/docker-compose.yml
 version: '3.8'
@@ -131,11 +131,11 @@ volumes:
   wp_data:
 ENDOFCOMPOSE
 
+# Executar el docker compose amb rutes clares
 cd /opt/wp
-# Ús de la ruta absoluta de Docker per evitar problemes de PATH
-/usr/bin/docker compose up -d
+docker compose up -d &>> /var/log/user-data.log
 
-echo "END \$(date)"
+echo "END" >> /var/log/user-data.log
 EOF
 
   tags = {
