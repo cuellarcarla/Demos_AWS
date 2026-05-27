@@ -23,7 +23,7 @@ data "aws_subnets" "default" {
   }
 }
 
-# Security Group: només port 80 obert al món
+# Security Group: obrim port 80 (Web) i port 22 (SSH de seguretat)
 resource "aws_security_group" "wp" {
   name        = "wp-ec2-sg"
   description = "WordPress EC2"
@@ -35,6 +35,14 @@ resource "aws_security_group" "wp" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -72,8 +80,13 @@ echo "START \$(date)"
 yum update -y
 yum install -y docker docker-compose-plugin
 
-systemctl start docker
+# Engegar servei
+systemctl daemon-reload
 systemctl enable docker
+systemctl start docker
+
+# Pausa de seguretat perquè Docker aixeque la seva xarxa interna interna
+sleep 15
 
 # Crear directori del projecte
 mkdir -p /opt/wp
@@ -110,7 +123,9 @@ volumes:
 ENDOFCOMPOSE
 
 cd /opt/wp
-docker compose up -d
+# Ús de la ruta absoluta de Docker per evitar problemes de PATH
+/usr/bin/docker compose up -d
+
 echo "END \$(date)"
 EOF
 
