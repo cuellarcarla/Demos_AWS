@@ -68,7 +68,7 @@ data "aws_ami" "al2023" {
 
 resource "aws_instance" "wordpress" {
   ami                         = data.aws_ami.al2023.id
-  instance_type               = "t3.micro"
+  instance_type               = "t2.micro"
   
   # Forcem l'ús de la subnet pública trobada pel filtre
   subnet_id                   = tolist(data.aws_subnets.public.ids)[0]
