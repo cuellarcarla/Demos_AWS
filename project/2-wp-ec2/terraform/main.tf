@@ -61,21 +61,21 @@ resource "aws_instance" "wordpress" {
   associate_public_ip_address = true
 
   # user_data: instal·la Docker i arrenca WordPress + MySQL
-  user_data = <<-EOF
+user_data = <<-EOF
     #!/bin/bash
+    set -e
     yum update -y
     yum install -y docker
     systemctl start docker
     systemctl enable docker
 
-    # Docker Compose v2 (plugin)
     mkdir -p /usr/local/lib/docker/cli-plugins
     curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
       -o /usr/local/lib/docker/cli-plugins/docker-compose
     chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
     mkdir -p /opt/wp
-    cat > /opt/wp/docker-compose.yml << 'COMPOSE'
+    cat > /opt/wp/docker-compose.yml << 'ENDOFCOMPOSE'
 version: '3.8'
 services:
   db:
@@ -105,7 +105,7 @@ services:
 volumes:
   db_data:
   wp_data:
-COMPOSE
+ENDOFCOMPOSE
 
     cd /opt/wp && docker compose up -d
   EOF
