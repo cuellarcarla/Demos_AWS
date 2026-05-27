@@ -23,7 +23,7 @@ data "aws_subnets" "default" {
   }
 }
 
-# Security Group: només ports 80 obert al món
+# Security Group: només port 80 obert al món
 resource "aws_security_group" "wp" {
   name        = "wp-ec2-sg"
   description = "WordPress EC2"
@@ -43,7 +43,7 @@ resource "aws_security_group" "wp" {
   }
 }
 
-# AMI Amazon Linux 2023 (més lleugera i disponible al Learner Lab)
+# AMI Amazon Linux 2023
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
@@ -61,19 +61,19 @@ resource "aws_instance" "wordpress" {
   associate_public_ip_address = true
   user_data_replace_on_change = true
 
-user_data = <<-EOF
+  user_data = <<-EOF
     #!/bin/bash
     exec > /var/log/user-data.log 2>&1
     echo "START $(date)"
 
+    # Actualitzar i instal·lar Docker + el connector Compose oficial d'Amazon
     yum update -y
-    yum install -y docker
+    yum install -y docker docker-compose-plugin
+    
     systemctl start docker
     systemctl enable docker
 
-    yum install -y python3-pip
-    pip3 install docker-compose
-
+    # Crear directori del projecte
     mkdir -p /opt/wp
     cat > /opt/wp/docker-compose.yml << 'ENDOFCOMPOSE'
 version: '3.8'
@@ -108,7 +108,8 @@ volumes:
 ENDOFCOMPOSE
 
     cd /opt/wp
-    docker-compose up -d
+    # Nota el canvi: ara és 'docker compose' espai, no guionet
+    docker compose up -d
     echo "END $(date)"
   EOF
 
