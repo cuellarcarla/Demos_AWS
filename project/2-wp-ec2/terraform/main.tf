@@ -61,7 +61,8 @@ resource "aws_instance" "wordpress" {
   associate_public_ip_address = true
   user_data_replace_on_change = true
 
-  # S'han eliminat completament els espais inicials de cada línia de l'script
+  iam_instance_profile        = "LabInstanceProfile"
+
   user_data = <<EOF
 #!/bin/bash
 exec > /var/log/user-data.log 2>&1
